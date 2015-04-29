@@ -38,26 +38,39 @@ define( [
         reset: function () {
             this._nodeList = [];
         },
+        /**
+         * Make sure a node and its descendant doesn't cast shadow
+         */
+        removeNode: function ( node ) {
+
+            /*jshint bitwise: false */
+
+            var nm = node.getNodeMask();
+            // ~0x0 as not to be processed
+            if ( nm === ~0x0 ) {
+                // set to avoid casting shadow
+                nm = this._noCastMask;
+                node.setNodeMask( nm );
+                this._nodeList.push( node );
+            } else if ( ( nm & ~( this._noCastMask ) ) !== 0 ) {
+                // set to avoid casting shadow
+                node.setNodeMask( nm | this._noCastMask );
+                this._nodeList.push( node );
+            }
+
+            /*jshint bitwise: true */
+
+        },
         apply: function ( node ) {
             var st = node.getStateSet();
             // check that and other things ?
-            if ( st ) {
+            if ( node.getTypeID() === Camera.typeID ) {
+                this.removeNode( node );
+                return;
+            } else if ( st ) {
                 var blend = st.getAttribute( 'BlendFunc' );
                 if ( blend !== undefined && blend.getSource() !== BlendFunc.DISABLE ) {
-                    /*jshint bitwise: false */
-                    var nm = node.getNodeMask();
-                    // ~0x0 as not to be processed
-                    if ( nm === ~0x0 ) {
-                        // set to avoid casting shadow
-                        nm = this._noCastMask;
-                        node.setNodeMask( nm );
-                        this._nodeList.push( node );
-                    } else if ( ( nm & ~( this._noCastMask ) ) !== 0 ) {
-                        // set to avoid casting shadow
-                        node.setNodeMask( nm | this._noCastMask );
-                        this._nodeList.push( node );
-                    }
-                    /*jshint bitwise: true */
+                    this.removeNode( node );
                     return;
                 }
             }
@@ -819,9 +832,7 @@ define( [
             //  light pos & lightTarget in World Space
             if ( light.getPosition()[ 3 ] !== 0.0 && light.getSpotCutoff() < 180 ) {
                 //TODO: when spot light is camera attached?
-
-                // light matrix is in eye space. even if it's below an Absolute REF Node. (wtf)
-                Matrix.inverse( cullVisitor.getCurrentModelViewMatrix(), eyeToWorld );
+                // light matrix has to be in eye space for light & shadow shader to be in same space
                 Matrix.mult( eyeToWorld, lightMatrix, this._tmpMatrix );
                 var worldMatrix = this._tmpMatrix;
                 // same code as light spot shader
