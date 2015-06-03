@@ -34,6 +34,12 @@ var CustomCompiler;
             var materialUniforms = this.getOrCreateStateAttributeUniforms( this._material );
 
 
+            // here we gather all Root of the Shader Graph
+            // for the cases where you have multiple output
+            // (output glFragDepth, or
+            // glFragColor[0], glFragColor[1], etc in the MRT case)
+            var roots = [];
+
             // that's the final result of the shader graph
             var fragColor = factory.getNode( 'FragColor' );
 
@@ -129,7 +135,8 @@ var CustomCompiler;
 
             }
 
-            return fragColor;
+            roots.push( fragColor );
+            return roots;
         }
 
     } );
